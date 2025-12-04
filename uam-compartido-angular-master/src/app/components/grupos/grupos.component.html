@@ -1,0 +1,435 @@
+<div class="container">
+    <div class="row vh-100">
+        <div class="col d-flex flex-column justify-content-center">
+            <div class="d-flex flex-column">
+                <a *ngIf="isAdmin" class="btn btn-primary m-2 w-25" data-bs-toggle="modal" data-bs-target="#alta">Alta
+                    grupo</a>
+                <h2 class="text-center">Grupos en plataforma</h2>
+            </div>
+
+            <input class="form-control mr-sm-2 mb-2" type="search" name="busqueda"
+                placeholder="Búsqueda por unidad, profesor, clave o trimestre" aria-label="Search"
+                (change)="buscar($event)">
+
+            <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+                <table class="table table-dark table-striped text-center w-100">
+                    <thead>
+                        <tr>
+                            <th scope="col">Clave de grupo</th>
+                            <th scope="col">UEA</th>
+                            <th scope="col">Unidad</th>
+                            <th scope="col">Salón</th>
+                            <th scope="col">Profesor</th>
+                            <th scope="col">Cupo</th>
+                            <th scope="col">Inscritos</th>
+                            <th scope="col">Trimestre</th>
+                            <th scope="col">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let grupo of listaGrupos.grupos">
+                            <td>{{ grupo.clavegrupo }}</td>
+                            <td>{{ grupo.uea.nombre }}</td>
+                            <td>{{ grupo.unidad.nombre }}</td>
+                            <td>{{ grupo.salon.nombre }}</td>
+                            <td>{{ grupo.profesor.noeconomico + ' ' + grupo.profesor.nombre + ' ' +
+                                grupo.profesor.apellidopaterno + ' ' + grupo.profesor.apellidomaterno }}</td>
+                            <td>{{ grupo.cupounidad }}</td>
+                            <td *ngIf="isAdmin">
+                                <div *ngIf="edicion !== grupo.clavegrupo" style="cursor: pointer;"
+                                    (click)="activarEdicion(grupo)">
+                                    {{ grupo.inscritos }}
+                                </div>
+                                <div *ngIf="edicion === grupo.clavegrupo">
+                                    <input type="number" class="form-control form-control-sm" style="width: 80px;"
+                                        (change)="actualizarInscritos(grupo, $event)" min="0">
+                                </div>
+                            </td>
+                            <td *ngIf="!isAdmin">
+                                {{ grupo.inscritos }}
+                            </td>
+                            <td>{{ grupo.trimestreestacion }}</td>
+                            <td>
+                                <a *ngIf="isAdmin" class="btn btn-primary m-2" data-bs-toggle="modal"
+                                    data-bs-target="#compartir" (click)="guardarGrupo(grupo)">Compartir</a>
+                                <a class="btn btn-secondary m-2" data-bs-toggle="modal" data-bs-target="#horario"
+                                    (click)="ponerHorario(grupo)">Horario</a>
+                                <a *ngIf="isAdmin" class="btn btn-success m-2" data-bs-toggle="modal"
+                                    data-bs-target="#editar" (click)="ponerInfo(grupo)">
+                                    <i class="bi bi-pencil"></i></a>
+                                <a *ngIf="isAdmin" class="btn btn-danger m-2" (click)="eliminar(grupo.clavegrupo)"><i
+                                        class="bi bi-trash"></i></a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div *ngIf="isAdmin" class="modal fade" id="editar" tabindex="-1" aria-labelledby="exampleModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content text-bg-dark">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="exampleModalLabel">Edita los datos del grupo</h1>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form [formGroup]="formularioEditar" (ngSubmit)="editar()" method="post">
+                    <div class="row">
+                        <div class="col-lg-4">
+                            <div class="mb-3">
+                                <label for="clave" class="form-label">Clave de grupo: </label>
+                                <input formControlName="clavegrupo" type="text" class="form-control" id="clave"
+                                    [ngClass]="{'is-valid': clavegrupoEditar?.valid && clavegrupoEditar?.touched, 'is-invalid': clavegrupoEditar?.invalid && clavegrupoEditar?.touched}"
+                                    name="clave" required placeholder="Ingresa la clave" readonly>
+                            </div>
+                            <div class="valid-feedback">
+                            </div>
+                            <div class="invalid-feedback">
+                            </div>
+                        </div>
+                        <div class="col-lg-4">
+                            <div class="mb-3">
+                                <label for="uea" class="form-label">UEA: </label>
+                                <select id="uea" class="form-select" formControlName="uea" required>
+                                    <option value="" disabled>Selecciona la clave de uea</option>
+                                    <option *ngFor="let uea of infoGrupo.ueas" [ngValue]="uea">
+                                        {{ uea.clave + ' ' + uea.nombre }}
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4">
+                            <div class="mb-3">
+                                <label for="cupo" class="form-label">Cupo: </label>
+                                <input formControlName="cupounidad" min="0" type="number" class="form-control" id="cupo"
+                                    [ngClass]="{'is-valid': cupounidadEditar?.valid && cupounidadEditar?.touched, 'is-invalid': cupounidadEditar?.invalid && cupounidadEditar?.touched}"
+                                    name="cupo" required placeholder="Ingresa el margen del grupo">
+                            </div>
+                            <div class="valid-feedback">
+                            </div>
+                            <div class="invalid-feedback">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-lg-4">
+                            <div class="mb-3">
+                                <label for="unidad" class="form-label">Unidad: </label>
+                                <select id="unidad" class="form-select" formControlName="unidad" required>
+                                    <option value="" disabled>Selecciona una unidad</option>
+                                    <option *ngFor="let unidad of infoGrupo.unidades" [ngValue]="unidad">
+                                        {{ unidad.nombre }}
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4">
+                            <div class="mb-3">
+                                <label for="profesor" class="form-label">Profesor:</label>
+                                <select class="form-select" id="profesor" name="profesor" formControlName="profesor"
+                                    required>
+                                    <option value="" disabled>Selecciona el profesor</option>
+                                    <option *ngFor="let usuario of infoGrupo.usuarios" [ngValue]="usuario">
+                                        {{ usuario.noeconomico + ' ' + usuario.nombre }}
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4">
+                            <div class="mb-3">
+                                <label for="salon" class="form-label">Salón: </label>
+                                <select class="form-select" id="salon" name="salon" formControlName="salon" required>
+                                    <option value="" disabled>Selecciona el salón</option>
+                                    <option *ngFor="let salon of infoGrupo.salones" [ngValue]="salon">
+                                        {{ salon.nombre }}
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-lg-4">
+                            <div class="mb-3">
+                                <label for="tri" class="form-label">Trimestre:</label>
+                                <input formControlName="trimestreestacion" type="text" class="form-control" id="tri"
+                                    [ngClass]="{'is-valid': trimestreestacionEditar?.valid && trimestreestacionEditar?.touched, 'is-invalid': trimestreestacionEditar?.invalid && trimestreestacionEditar?.touched}"
+                                    name="clave" required placeholder="Ingresa el trimestre">
+                            </div>
+                            <div class="valid-feedback">
+                            </div>
+                            <div class="invalid-feedback">
+                                El formato debe ser de 3 caracteres
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="container mt-4">
+                            <h3 class="text-center">Seleccione el Horario</h3>
+                            <table class="table table-bordered text-center">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Hora</th>
+                                        <th *ngFor="let dia of infoGrupo.dias">{{ dia }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr *ngFor="let hora of infoGrupo.horas">
+                                        <td>{{ hora }}</td>
+                                        <td *ngFor="let dia of infoGrupo.dias" class="horario-cell">
+                                            <input class="form-check-input" type="checkbox" [value]="dia + ',' + hora"
+                                                (change)="actualizarHorario($event)">
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                        <button type="submit" class="btn btn-success" [disabled]="formularioEditar.invalid"
+                            data-bs-dismiss="modal">Guardar cambios</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div *ngIf="isAdmin" class="modal fade" id="alta" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content text-bg-dark">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="exampleModalLabel">Ingresa los datos del grupo</h1>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form [formGroup]="formulario" (ngSubmit)="enviar()" method="post">
+                    <div class="row">
+                        <div class="col-lg-4">
+                            <div class="mb-3">
+                                <label for="clave" class="form-label">Clave de grupo:</label>
+                                <input formControlName="clavegrupo" type="text" class="form-control" id="clave"
+                                    [ngClass]="{'is-valid': clavegrupo?.valid && clavegrupo?.touched, 'is-invalid': clavegrupo?.invalid && clavegrupo?.touched}"
+                                    name="clave" required placeholder="Ingresa la clave">
+                            </div>
+                            <div class="valid-feedback">
+                            </div>
+                            <div class="invalid-feedback">
+                            </div>
+                        </div>
+                        <div class="col-lg-4">
+                            <div class="mb-3">
+                                <label for="uea" class="form-label">UEA: </label>
+                                <select id="uea" class="form-select" formControlName="uea" required>
+                                    <option value="" disabled>Selecciona la clave de uea</option>
+                                    <option *ngFor="let uea of infoGrupo.ueas" [ngValue]="uea">
+                                        {{ uea.clave + ' ' + uea.nombre }}
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4">
+                            <div class="mb-3">
+                                <label for="cupo" class="form-label">Cupo: </label>
+                                <input formControlName="cupounidad" min="0" type="number" class="form-control" id="cupo"
+                                    [ngClass]="{'is-valid': cupounidad?.valid && cupounidad?.touched, 'is-invalid': cupounidad?.invalid && cupounidad?.touched}"
+                                    name="cupo" required placeholder="Ingresa el margen del grupo">
+                                <div class="valid-feedback">
+                                </div>
+                                <div class="invalid-feedback">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-lg-4">
+                            <div class="mb-3">
+                                <label for="unidad" class="form-label">Unidad: </label>
+                                <select id="unidad" class="form-select" formControlName="unidad" required>
+                                    <option value="" disabled>Selecciona una unidad</option>
+                                    <option *ngFor="let unidad of infoGrupo.unidades" [ngValue]="unidad">
+                                        {{ unidad.nombre }}
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4">
+                            <div class="mb-3">
+                                <label for="profesor" class="form-label">Profesor:</label>
+                                <select class="form-select" id="profesor" name="profesor" formControlName="profesor"
+                                    required>
+                                    <option value="" disabled>Selecciona el profesor</option>
+                                    <option *ngFor="let usuario of infoGrupo.usuarios" [ngValue]="usuario">
+                                        {{ usuario.noeconomico + ' ' + usuario.nombre }}
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4">
+                            <div class="mb-3">
+                                <label for="salon" class="form-label">Salón: </label>
+                                <select class="form-select" id="salon" name="salon" formControlName="salon" required>
+                                    <option value="" disabled>Selecciona el salón</option>
+                                    <option *ngFor="let salon of infoGrupo.salones" [ngValue]="salon">
+                                        {{ salon.nombre }}
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-lg-4">
+                            <div class="mb-3">
+                                <label for="tri" class="form-label">Trimestre:</label>
+                                <input formControlName="trimestreestacion" type="text" class="form-control" id="tri"
+                                [ngClass]="{'is-valid': trimestreestacion?.valid && trimestreestacion?.touched, 'is-invalid': trimestreestacion?.invalid && trimestreestacion?.touched}"
+                                    name="clave" required placeholder="Ingresa el trimestre">
+                            </div>
+                            <div class="valid-feedback">
+                            </div>
+                            <div class="invalid-feedback">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="container mt-4">
+                            <h3 class="text-center">Seleccione el Horario</h3>
+                            <table class="table table-bordered text-center">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Hora</th>
+                                        <th *ngFor="let dia of infoGrupo.dias">{{ dia }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr *ngFor="let hora of infoGrupo.horas">
+                                        <td>{{ hora }}</td>
+                                        <td *ngFor="let dia of infoGrupo.dias" class="horario-cell">
+                                            <input class="form-check-input" type="checkbox" [value]="dia + ',' + hora"
+                                                (change)="actualizarHorario($event)">
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                        <button type="button" class="btn btn-primary" (click)="limpiar()">Limpiar</button>
+                        <button type="submit" class="btn btn-success" [disabled]="formulario.invalid"
+                            data-bs-dismiss="modal">Guardar cambios</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div *ngIf="isAdmin" class="modal fade" id="compartir" tabindex="-1" aria-labelledby="exampleModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content text-bg-dark">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="exampleModalLabel">Elige las unidades para compartir el grupo</h1>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post">
+                    <div class="form-check" *ngIf="grupoCompartir.unidad.idunidad !== 1">
+                        <input class="form-check-input" type="checkbox" id="ler" [value]="1"
+                            (change)="seleccionar($event)">
+                        <label for="ler">Lerma</label>
+                    </div>
+
+                    <div class="form-check" *ngIf="grupoCompartir.unidad.idunidad !== 2">
+                        <input class="form-check-input" type="checkbox" id="cua" [value]="2"
+                            (change)="seleccionar($event)">
+                        <label for="cua">Cuajimalpa</label>
+                    </div>
+
+                    <div class="form-check" *ngIf="grupoCompartir.unidad.idunidad !== 3">
+                        <input class="form-check-input" type="checkbox" id="azc" [value]="3"
+                            (change)="seleccionar($event)">
+                        <label for="azc">Azcapotzalco</label>
+                    </div>
+
+                    <div class="form-check" *ngIf="grupoCompartir.unidad.idunidad !== 4">
+                        <input class="form-check-input" type="checkbox" id="xoch" [value]="4"
+                            (change)="seleccionar($event)">
+                        <label for="xoch">Xochimilco</label>
+                    </div>
+
+                    <div class="form-check" *ngIf="grupoCompartir.unidad.idunidad !== 5">
+                        <input class="form-check-input" type="checkbox" id="cua" [value]="5"
+                            (change)="seleccionar($event)">
+                        <label for="cua">Iztapalapa</label>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                        <button type="button" class="btn btn-success" data-bs-dismiss="modal"
+                            (click)="compartir()">Compartir</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="horario" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content text-bg-dark">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="exampleModalLabel">Horario de la UEA</h1>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="container mt-4">
+                        <table class="table table-bordered text-center">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Hora</th>
+                                    <th *ngFor="let dia of infoGrupo.dias">{{ dia }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let hora of infoGrupo.horas">
+                                    <td>{{ hora }}</td>
+                                    <td *ngFor="let dia of infoGrupo.dias" class="horario-cell">
+                                        <span *ngFor="let horario of jsonHorario">
+                                            <span *ngIf="horario.dia == dia && horario.hora == hora"
+                                                class="badge text-bg-success">✔</span>
+                                        </span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
